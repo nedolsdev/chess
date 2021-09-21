@@ -1,0 +1,30 @@
+/* Controls all styling */
+#board {
+    border-collapse: collapse;
+}
+
+#board td {
+  width: 60px;
+  height: 60px;
+}
+
+#board td img {
+  width: 60px;
+  height: 60px;
+}
+
+.light {
+    background-color: beige;
+}
+
+.dark {
+    background-color: #7e9a3b;
+}
+
+.moveHere {
+      background-color: lime;
+}
+
+.takeHere {
+      background-color: red;
+}

@@ -1,0 +1,6 @@
+Enpassant can discover self-check.
+King can move into check.
+King can't move out of check.
+King attempts to block path of check to itself.
+Pieces do not obey pins.
+Castling does not work.

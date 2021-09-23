@@ -49,14 +49,72 @@ class ChessGame {
             this.moves = childrenMoves;
       }
 
+      testForAttackers(attackers, type1, type2) {
+            for (var i=0; i < attackers.captures.length; i++) {
+                  if (attackers.captures[i].captureTarget.piece.type == type1 || attackers.captures[i].captureTarget.piece.type == type2) {
+                          this.kingAttackers.push(attackers.captures[i].captureTarget.piece);
+                  }
+            }
+      }
+
       getKingAttackers() {
-              //generate attacker pieces with piece attributes but also interceptingPositions
-              //test for which neighbouring empty spaces near the king are in check
-              return [];
+              this.kingAttackers = [];
+              var king = this.pieces[this.turn]["kings"][0];
+              var attackersInKnightsMove = king.getKnightMoves(this, []);
+              this.testForAttackers(attackersInKnightsMove, "knight");
+              king.type = "rook";
+              var attackersInRooksMove = king.getSlidingMoves(this, []);
+              this.testForAttackers(attackersInRooksMove, "rook", "queen");
+              king.type = "bishop";
+              var attackersInRooksMove = king.getSlidingMoves(this, []);
+              this.testForAttackers(attackersInRooksMove, "bishop", "queen");
+              var attackersInPawnsMove = king.getPawnMoves(this, []);
+              this.testForAttackers(attackersInPawnsMove, "pawn");
+
+              king.type = "king";
+              for (var i=0; i < this.kingAttackers.length; i++) { //get intercepting positions for each piece
+                      var attacker = this.kingAttackers[i];
+                      attacker.interceptingPositions = attacker.getInterceptingSquares(this, king);
+              }
       }
 
       updatePins() {
+            for (var i=0; i < this.pieces[this.turn].length; i++) {
+                  this.pieces[this.turn][i].pinned = false; //initialise pieces as unpinned
+            }
+            var king = this.pieces[this.turn]["kings"][0];
+            king.type = "queen";
+            var directions = king.getSlidingDirections();
+            console.log("-----")
+            for (var i=0; i < directions.length; i++) {
+                    var result = king.getMovesInDirection({moves : [], captures : []}, king.position, directions[i], this, []);
+                    if (result.endPoint != undefined && result.endPoint.piece.color == this.turn) { //found potentially pinned friendly piece
+                            console.log(result);
+                            var pieceResult = king.getMovesInDirection({moves : [], captures : []}, result.endPoint.piece.position, directions[i], this, []);
+                            if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.color != this.turn) {
+                                  console.log('piece result')
+                                  console.log(pieceResult);
+                            }
+                    }
+            }
+
+
             //update pieces to be pinned or not pinned with their pinnedSquares if necessary
+
+            //get the king
+            //shoot in each 8 directions and record the target
+            //if the target is your own piece then continue and record the next target
+            //if the target is an enemy piece check if it could attack the king
+            king.type = "king";
+      }
+
+      getSquaresInCheck() {
+            //test for which neighbouring empty spaces near the king are in check
+            //also test for castling spaces
+            this.squaresInCheck = [];
+      }
+
+      updateCastling() {
 
       }
 
@@ -79,21 +137,34 @@ class ChessGame {
             }
       }
 
-      updateCastling() {
-
-      }
-
-      updatePromotion() {
-
+      updatePromotion(piece, position) {
+              if (piece.type != "pawn") {
+                    return;
+              }
+              var row;
+              if (this.turn == "white") {
+                    row = 0;
+              }
+              if (this.turn == "black") {
+                    row = 7;
+              }
+              if (position.row == row) { //do the promotion thing
+                    //add some on screen select later
+                    piece.promoteToType(promotePawn());
+                    renderPiece(position.square, piece);
+              }
       }
 
       updateGameState(position, piece, originalPosition) {
-              this.turn = this.changeTurn();
+              //order of these functions matter particulary which are before and after change turn and after getting king attackers
+              this.updatePromotion(piece, position);
+              this.changeTurn();
               this.updateEnpassant(position, piece, originalPosition);
-              this.kingAttackers = this.getKingAttackers(); //gets array of pieces attacking the king
+              this.getKingAttackers(); //gets array of pieces attacking the king
               this.updatePins(); //updates pieces which are pinned and not pinned
+              this.getSquaresInCheck();
               this.updateCastling();
-              this.updatePromotion();
+
 
               this.moves = this.findAllChildrenMoves(this);
       }
@@ -173,9 +244,10 @@ class ChessGame {
 
       changeTurn() {
             if (this.turn == "white") {
-                  return "black";
+                  this.turn = "black";
+            } else {
+                  this.turn = "white";
             }
-            return "white";
       }
 
       loadGameFromFenString(fenString) { //resets this chess game object from a FEN string
@@ -229,7 +301,7 @@ class ChessGame {
                     return undefined;
               }
               row--; //rows are from 0-7
-              var column = notation.charCodeAt(0)-97;
+              var column = notation.charCodeAt(0)-97; //converts a to 0, b to 1 etc.
               var square = row * 8 + column;
               return {
                     square : square,
@@ -240,7 +312,7 @@ class ChessGame {
 
       pieceFromFenCharacter(char, square) {
             var color = "white";
-            if (char >= "a" && char <= "z") color = "black";
+            if (char >= "a" && char <= "z") color = "black"; //lower case denotes black, upper case denotes white
             var type;
             if (char == "P" || char == "p") type = "pawn";
             if (char == "N" || char == "n") type = "knight";

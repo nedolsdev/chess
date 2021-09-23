@@ -43,7 +43,7 @@ function executeMove(square, piece, chessGame) {
         hideSquareImage(piece.position.square);
         renderPiece(square, piece);
         clearMovesFromDisplay();
-        chessGame.updateFromMove(square, piece);
+        chessGame.updateFromMove(parseInt(square), piece);
         chessGame.clearMoves();
 }
 
@@ -100,6 +100,12 @@ function clickedPiece(index, chessGame) {
       chessGame.potentialCaptures = piece.legalMoves.captures;
       chessGame.potentialMoves = piece.legalMoves.moves;
       displayMoves(piece);
+}
+
+function promotePawn() {
+      var piece = prompt("Select a piece: ");
+      if (piece != "queen" && piece != "bishop" && piece != "knight" && piece != "rook") piece = "queen";
+      return piece;
 }
 
 function hideSquareImage(square) { //add to square class later

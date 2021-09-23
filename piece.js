@@ -22,6 +22,41 @@ class Piece {
             };
       }
 
+      promoteToType(type) {
+            this.type = type;
+            this.image = this.color + "_" + type;
+      }
+
+      getDirectionFromDifference(rowDifference, columnDifference) {
+            return { // x || 1 avoids division by 0
+                  row : rowDifference / (Math.abs(rowDifference) || 1),
+                  column : columnDifference / (Math.abs(columnDifference) || 1)
+            }
+      }
+
+      getAttackingLine(gameState, king) {
+              var lineOfSight = [];
+              var rowDifference = king.position.row - this.position.row;
+              var columnDifference = king.position.column - this.position.column;
+              var direction = this.getDirectionFromDifference(rowDifference, columnDifference);
+              var movePosition = {...this.position};
+              while (king.position.row != movePosition.row || king.position.column != movePosition.column) {
+                      movePosition = this.newPositionFromDirection(movePosition, direction);
+                      lineOfSight.push(movePosition.square);
+              }
+              return lineOfSight;
+      }
+
+      getInterceptingSquares(gameState, king) {
+              var interceptingSquares = [this.position.square];
+              if (this.type == "knight" || this.type == "pawn") {
+                    return interceptingSquares;
+              }
+              var lineOfSight = this.getAttackingLine(gameState, king);
+              interceptingSquares = interceptingSquares.concat(lineOfSight);
+              return interceptingSquares;
+      }
+
       getAllLegalMoves(gameState) {
               var legalMoves;
               var legalPositions = [];
@@ -136,6 +171,10 @@ class Piece {
                       move.captureTarget = this.squareAtPosition(gameState.board, move);
                       legalMoves.captures.push(move);
               }
+              if (moveResult != undefined && (moveResult.target == "friendly" || moveResult.target == "enemy")) { //for finding pins
+                    move.piece = this.squareAtPosition(gameState.board, move).piece;
+                    legalMoves.endPoint = move;
+              }
               return legalMoves;
       }
 
@@ -219,6 +258,7 @@ class Piece {
             move = this.newPositionFromDirection(this.position, {column : -1, row : rowDirection});
             var leftTake = this.getOneSpaceMove(move, gameState);
             if (leftTake.target == "enemy" && this.moveIsLegal(move, legalPositions)) {
+                  move.captureTarget = this.squareAtPosition(gameState.board, move);
                   legalMoves.captures.push(move);
             }
             if (gameState.enpassantTargetSquare != undefined && move.square == gameState.enpassantTargetSquare.square) {
@@ -227,14 +267,12 @@ class Piece {
             move = this.newPositionFromDirection(this.position, {column : 1, row : rowDirection});
             var rightTake = this.getOneSpaceMove(move, gameState);
             if (rightTake.target == "enemy" && this.moveIsLegal(move, legalPositions)) {
+                  move.captureTarget = this.squareAtPosition(gameState.board, move);
                   legalMoves.captures.push(move);
             }
             if (gameState.enpassantTargetSquare != undefined && move.square == gameState.enpassantTargetSquare.square) {
                   legalMoves.moves.push(move);
             }
-
-            //add en passant
-
             return legalMoves;
       }
 
@@ -252,6 +290,7 @@ class Piece {
                           legalMoves.moves.push(move);
                   }
                   if (moveResult != undefined && moveResult.target == "enemy" && this.moveIsLegal(move, legalPositions)) {
+                          move.captureTarget = this.squareAtPosition(gameState.board, move);
                           legalMoves.captures.push(move);
                   }
             }

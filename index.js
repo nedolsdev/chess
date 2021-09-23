@@ -39,11 +39,13 @@ function renderCheckerBoard(boardID, chessGame) { //add to chess class later
       }
 }
 
-function executeMove(square, piece, chessGame) {
-        hideSquareImage(piece.position.square);
-        renderPiece(square, piece);
-        clearMovesFromDisplay();
-        chessGame.updateFromMove(parseInt(square), piece);
+function executeMove(square, piece, chessGame, isCastle) {
+        if (!ai) {
+              hideSquareImage(piece.position.square);
+              renderPiece(square, piece);
+              clearMovesFromDisplay();
+        }
+        chessGame.updateFromMove(parseInt(square), piece, isCastle);
         chessGame.clearMoves();
 }
 
@@ -116,6 +118,7 @@ function hideSquareImage(square) { //add to square class later
 
 function renderPiece(square, piece) { //add to square class later
       var images = document.getElementsByClassName("imageDisplay");
+      console.log(square);
       images[square].style.display = "block";
       images[square].src = "./pieces/" + piece.image + ".png";
 }

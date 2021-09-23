@@ -212,8 +212,17 @@ class Piece {
                           legalMoves.captures.push(move);
                   }
             }
+
+            if (gameState.tempCastlingRights[gameState.turn].kingSide) {
+                    legalMoves.moves.push(this.getRowColPositionFromSquare(gameState.getKingSideSquares()[1]));
+            }
+            if (gameState.tempCastlingRights[gameState.turn].queenSide) {
+                    legalMoves.moves.push(this.getRowColPositionFromSquare(gameState.getQueenSideSquares()[1]));
+            }
+
             return legalMoves;
       }
+
 
       getPawnDirection() {
             if (this.color == "white") {

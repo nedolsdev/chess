@@ -38,6 +38,17 @@ class ChessGame {
                         kingSide : true,
                   },
             };
+            this.tempCastlingRights = {
+                  black : {
+                        queenSide : false,
+                        kingSide : false,
+                  },
+                  white : {
+                        queenSide : false,
+                        kingSide : false,
+                  },
+            }
+
             if (fenString == undefined) {
                   this.loadGameFromFenString("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq h4 0 1");
             } else {
@@ -68,12 +79,13 @@ class ChessGame {
       }
 
       getKingAttackers() {
-              this.kingAttackers = [];
+              var attackers = [];
               var king = this.pieces[this.turn]["kings"][0];
-              this.kingAttackers = this.kingAttackers.concat(this.testForAttackers(king.getKnightMoves(this, []), "knight"));
-              this.kingAttackers = this.kingAttackers.concat(this.testForAttackers(king.getSlidingMoves(this, [], "rook"), "rook", "queen"));
-              this.kingAttackers = this.kingAttackers.concat(this.testForAttackers(king.getSlidingMoves(this, [], "bishop"), "bishop", "queen"));
-              this.kingAttackers = this.kingAttackers.concat(this.testForAttackers(king.getPawnMoves(this, []), "pawn"));
+              attackers = attackers.concat(this.testForAttackers(king.getKnightMoves(this, []), "knight"));
+              attackers = attackers.concat(this.testForAttackers(king.getSlidingMoves(this, [], "rook"), "rook", "queen"));
+              attackers = attackers.concat(this.testForAttackers(king.getSlidingMoves(this, [], "bishop"), "bishop", "queen"));
+              attackers = attackers.concat(this.testForAttackers(king.getPawnMoves(this, []), "pawn"));
+              return attackers;
       }
 
       updatePins() {
@@ -105,7 +117,7 @@ class ChessGame {
             }
       }
 
-      getSquaresInCheck() {
+      getSquaresInCheckSurroundingKing() {
             this.squaresInCheck = [];
             var king = this.pieces[this.turn]["kings"][0];
             var originalKingPosition = {...king.position};
@@ -116,7 +128,7 @@ class ChessGame {
                             continue;
                     }
                     king.position = newPosition;
-                    this.getKingAttackers();
+                    this.kingAttackers = this.getKingAttackers();
                     if (this.kingAttackers.length != 0) { //there are some attackers hence there is check
                             this.squaresInCheck.push(newPosition.square);
                     }
@@ -124,8 +136,82 @@ class ChessGame {
             king.position = originalKingPosition;
       }
 
-      updateCastling() {
+      getInitalRookSquares() { //queen side, king side
+            if (this.turn == "black") {
+                  return [0, 7];
+            }
+            if (this.turn == "white") {
+                  return [56, 63];
+            }
+      }
 
+      updatePermCastling() { //castling rights for the game
+              var king = this.pieces[this.turn]["kings"][0];
+              var rooks = this.getInitalRookSquares();
+              if ((king.color == "black" && king.position.square != 4) || (king.color == "white" && king.position.square != 60)) {
+                      this.castlingRights[this.turn].kingSide = false;
+                      this.castlingRights[this.turn].queenSide = false;
+              }
+              if (this.castlingRights[this.turn].kingSide && king.squareAtPosition(this.board, this.getRowColPositionFromSquare(rooks[1])).piece?.type != "rook") {
+                        this.castlingRights[this.turn].kingSide = false;
+              }
+              if (this.castlingRights[this.turn].queenSide && king.squareAtPosition(this.board, this.getRowColPositionFromSquare(rooks[0])).piece?.type != "rook") {
+                        this.castlingRights[this.turn].queenSide = false;
+              }
+      }
+
+      getQueenSideSquares() {
+            if (this.turn == "white") {
+                  return [59, 58, 57, 56];
+            }
+            if (this.turn == "black") {
+                  return [3, 2, 1, 0];
+            }
+      }
+
+      getKingSideSquares() {
+            if (this.turn == "white") {
+                  return [61, 62, 63];
+            }
+            if (this.turn == "black") {
+                  return [5, 6, 7];
+            }
+      }
+
+      canCastle(squares) {
+              var king = this.pieces[this.turn]["kings"][0];
+              for (var i=0; i < squares.length-1; i++) {
+                      if (king.squareAtPosition(this.board, this.getRowColPositionFromSquare(squares[i])).piece != undefined) { //can only castle through empty squares
+                              return false;
+                      }
+              }
+              var originalKingPosition = {...king.position};
+              for (var i=0; i < squares.length-1; i++) { //test if the squares are in check
+                    king.position = this.getRowColPositionFromSquare(squares[i]);
+                    var attackers = this.getKingAttackers();
+                    if (attackers.length != 0) { //there are some attackers hence there is check
+                            king.position = originalKingPosition;
+                            return false;
+                    }
+              }
+              king.position = originalKingPosition;
+              return true;
+      }
+
+      updateTempCastling() { //castling rights for the turn
+              this.tempCastlingRights = {
+                    black : {},
+                    white : {},
+              };
+              this.tempCastlingRights[this.turn].kingSide = this.castlingRights[this.turn].kingSide;
+              this.tempCastlingRights[this.turn].queenSide = this.castlingRights[this.turn].queenSide;
+
+              if (this.castlingRights[this.turn].kingSide && !this.canCastle(this.getKingSideSquares())) {
+                      this.tempCastlingRights[this.turn].kingSide = false;
+              }
+              if (this.castlingRights[this.turn].queenSide && !this.canCastle(this.getQueenSideSquares())) {
+                      this.tempCastlingRights[this.turn].queenSide = false;
+              }
       }
 
       updateEnpassant(position, piece, originalPosition) {
@@ -165,29 +251,50 @@ class ChessGame {
               }
       }
 
+      moveRookForCastle(position, piece, originalPosition) {
+              console.log(position);
+              if (piece.type != "king") {
+                    return;
+              }
+              if (originalPosition.column - position.column == 2) { //castled to queen side
+                    this.castlingRights[this.turn].queenSide = false;
+                    this.castlingRights[this.turn].kingSide = false;
+                    executeMove(piece.newPositionFromDirection(position, {row : 0, column : 1}).square, piece.squareAtPosition(this.board, {row : position.row, column : 0}).piece, this, true)
+
+              }
+              if (position.column - originalPosition.column == 2) { //castled to king side
+                    this.castlingRights[this.turn].queenSide = false;
+                    this.castlingRights[this.turn].kingSide = false;
+                    executeMove(piece.newPositionFromDirection(position, {row : 0, column : -1}).square, piece.squareAtPosition(this.board, {row : position.row, column : 7}).piece, this, true)
+              }
+      }
+
       updateGameState(position, piece, originalPosition) {
               //order of these functions matter particulary which are before and after change turn and after getting king attackers
               this.updatePromotion(piece, position);
+              this.moveRookForCastle(position, piece, originalPosition);
               this.changeTurn();
               this.updateEnpassant(position, piece, originalPosition);
-              this.getSquaresInCheck();
-              this.getKingAttackers(); //gets array of pieces attacking the king
+              this.getSquaresInCheckSurroundingKing();
+              this.kingAttackers = this.getKingAttackers(); //gets array of pieces attacking the king
               this.getAttackerInterceptingSquares(); //gets all intercepting squares from attackers
               this.updatePins(); //updates pieces which are pinned and not pinned
-              this.updateCastling();
+              this.updatePermCastling();
+              this.updateTempCastling();
 
               this.moves = this.findAllChildrenMoves(this);
       }
 
-      updateFromMove(newSquare, piece) {
+      updateFromMove(newSquare, piece, isCastle) {
               var originalPosition = {...piece.position}
               var position = this.getRowColPositionFromSquare(newSquare);
               this.board[position.row][position.column].piece = piece;
               this.board[position.row][position.column].isEmpty = false;
               this.board[piece.position.row][piece.position.column] = new Square();
               piece.position = piece.getRowColPositionFromSquare(newSquare);
-
-              this.updateGameState(position, piece, originalPosition);
+              if (isCastle !== true) {
+                    this.updateGameState(position, piece, originalPosition);
+              }
       }
 
       findAllChildrenMoves(chessGame) {

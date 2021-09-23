@@ -65,10 +65,14 @@ class Piece {
                       legalPositions = attacker.interceptingPositions; //includes its position and lineOfSight
               }
               if (this.pinned) {
-                      legalPositions = legalPositions.filter(value=>this.pinnedSquares.includes(value)); //intersection between intersection of check and pinned
+                      if (legalPositions.length != 0) {
+                              legalPositions = legalPositions.filter(value=>this.pinnedSquares.includes(value)); //intersection between intersection of check and pinned
+                      } else {
+                              legalPositions = this.pinnedSquares;
+                      }
               }
               if (this.type == "rook" || this.type == "queen" || this.type == "bishop") {
-                      legalMoves = this.getSlidingMoves(gameState, legalPositions);
+                      legalMoves = this.getSlidingMoves(gameState, legalPositions, this.type);
               }
               if (this.type == "king") {
                       legalMoves = this.getKingMoves(gameState, legalPositions);
@@ -83,23 +87,23 @@ class Piece {
               return legalMoves;
       }
 
-      getSlidingDirections() {
+      getSlidingDirections(type) {
             var directions = [];
-            if (this.type == "rook" || this.type == "queen") {
+            if (type == "rook" || type == "queen") {
                     directions = directions.concat(
-                            [{column : -1, row : 0},
-                            {column : 1, row : 0},
-                            {column : 0, row : -1},
-                            {column : 0, row : 1},
+                            [{column : -1, row : 0, type : "rook"},
+                            {column : 1, row : 0, type : "rook"},
+                            {column : 0, row : -1, type : "rook"},
+                            {column : 0, row : 1, type : "rook"},
                             ]
                     );
             }
-            if (this.type == "bishop" || this.type == "queen") {
+            if (type == "bishop" || type == "queen") {
                     directions = directions.concat(
-                            [{column : -1, row : -1},
-                            {column : 1, row : -1},
-                            {column : -1, row : 1},
-                            {column : 1, row : 1},
+                            [{column : -1, row : -1, type : "bishop"},
+                            {column : 1, row : -1, type : "bishop"},
+                            {column : -1, row : 1, type : "bishop"},
+                            {column : 1, row : 1, type : "bishop"},
                             ]
                     );
             }
@@ -178,13 +182,13 @@ class Piece {
               return legalMoves;
       }
 
-      getSlidingMoves(gameState, legalPositions) { //rook, bishop, queen
+      getSlidingMoves(gameState, legalPositions, type) { //rook, bishop, queen
             var legalMoves = {
                   captures : [],
                   moves : [],
                   piece : this
             };
-            var directions = this.getSlidingDirections();
+            var directions = this.getSlidingDirections(type);
             var startingPosition = {...this.position};
             for (var i=0; i < directions.length; i++) {
                     var legalMoves = this.getMovesInDirection(legalMoves, startingPosition, directions[i], gameState, legalPositions);

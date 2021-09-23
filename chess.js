@@ -50,68 +50,78 @@ class ChessGame {
       }
 
       testForAttackers(attackers, type1, type2) {
+            var allAttackers = [];
             for (var i=0; i < attackers.captures.length; i++) {
                   if (attackers.captures[i].captureTarget.piece.type == type1 || attackers.captures[i].captureTarget.piece.type == type2) {
-                          this.kingAttackers.push(attackers.captures[i].captureTarget.piece);
+                          allAttackers.push(attackers.captures[i].captureTarget.piece);
                   }
+            }
+            return allAttackers;
+      }
+
+      getAttackerInterceptingSquares() {
+            var king = this.pieces[this.turn]["kings"][0];
+            for (var i=0; i < this.kingAttackers.length; i++) { //get intercepting positions for each piece
+                    var attacker = this.kingAttackers[i];
+                    attacker.interceptingPositions = attacker.getInterceptingSquares(this, king);
             }
       }
 
       getKingAttackers() {
               this.kingAttackers = [];
               var king = this.pieces[this.turn]["kings"][0];
-              var attackersInKnightsMove = king.getKnightMoves(this, []);
-              this.testForAttackers(attackersInKnightsMove, "knight");
-              king.type = "rook";
-              var attackersInRooksMove = king.getSlidingMoves(this, []);
-              this.testForAttackers(attackersInRooksMove, "rook", "queen");
-              king.type = "bishop";
-              var attackersInRooksMove = king.getSlidingMoves(this, []);
-              this.testForAttackers(attackersInRooksMove, "bishop", "queen");
-              var attackersInPawnsMove = king.getPawnMoves(this, []);
-              this.testForAttackers(attackersInPawnsMove, "pawn");
-
-              king.type = "king";
-              for (var i=0; i < this.kingAttackers.length; i++) { //get intercepting positions for each piece
-                      var attacker = this.kingAttackers[i];
-                      attacker.interceptingPositions = attacker.getInterceptingSquares(this, king);
-              }
+              this.kingAttackers = this.kingAttackers.concat(this.testForAttackers(king.getKnightMoves(this, []), "knight"));
+              this.kingAttackers = this.kingAttackers.concat(this.testForAttackers(king.getSlidingMoves(this, [], "rook"), "rook", "queen"));
+              this.kingAttackers = this.kingAttackers.concat(this.testForAttackers(king.getSlidingMoves(this, [], "bishop"), "bishop", "queen"));
+              this.kingAttackers = this.kingAttackers.concat(this.testForAttackers(king.getPawnMoves(this, []), "pawn"));
       }
 
       updatePins() {
-            for (var i=0; i < this.pieces[this.turn].length; i++) {
-                  this.pieces[this.turn][i].pinned = false; //initialise pieces as unpinned
+            for (var pieces in this.pieces[this.turn]) {
+                    for (var i=0; i < this.pieces[this.turn][pieces].length; i++) {
+                          this.pieces[this.turn][pieces][i].pinned = false;
+                    }
             }
             var king = this.pieces[this.turn]["kings"][0];
-            king.type = "queen";
-            var directions = king.getSlidingDirections();
-            console.log("-----")
+            var directions = king.getSlidingDirections("queen");
             for (var i=0; i < directions.length; i++) {
                     var result = king.getMovesInDirection({moves : [], captures : []}, king.position, directions[i], this, []);
                     if (result.endPoint != undefined && result.endPoint.piece.color == this.turn) { //found potentially pinned friendly piece
-                            console.log(result);
                             var pieceResult = king.getMovesInDirection({moves : [], captures : []}, result.endPoint.piece.position, directions[i], this, []);
                             if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.color != this.turn) {
-                                  console.log('piece result')
-                                  console.log(pieceResult);
+                                  if (directions[i].type == pieceResult.endPoint.piece.type || pieceResult.endPoint.piece.type == "queen") { //is pinned
+                                          var pinnedPiece = result.endPoint.piece;
+                                          var attacker = pieceResult.endPoint.piece;
+                                          var movePosition = {...pinnedPiece.position}
+                                          pinnedPiece.pinned = true;
+                                          pinnedPiece.pinnedSquares = [];
+                                          while (movePosition.row != attacker.position.row || movePosition.column != attacker.position.column) {
+                                                movePosition = pinnedPiece.newPositionFromDirection(movePosition, directions[i]);
+                                                pinnedPiece.pinnedSquares.push(movePosition.square);
+                                          }
+                                  }
                             }
                     }
             }
-
-
-            //update pieces to be pinned or not pinned with their pinnedSquares if necessary
-
-            //get the king
-            //shoot in each 8 directions and record the target
-            //if the target is your own piece then continue and record the next target
-            //if the target is an enemy piece check if it could attack the king
-            king.type = "king";
       }
 
       getSquaresInCheck() {
-            //test for which neighbouring empty spaces near the king are in check
-            //also test for castling spaces
             this.squaresInCheck = [];
+            var king = this.pieces[this.turn]["kings"][0];
+            var originalKingPosition = {...king.position};
+            var directions = king.getKingDirections();
+            for (var i=0; i < directions.length; i++) {
+                    var newPosition = king.newPositionFromDirection(originalKingPosition, directions[i]);
+                    if (king.positionIsOutOfBounds(newPosition) || king.squareAtPosition(this.board, newPosition).piece?.color == this.turn) { //if the square is our own piece we can't move there
+                            continue;
+                    }
+                    king.position = newPosition;
+                    this.getKingAttackers();
+                    if (this.kingAttackers.length != 0) { //there are some attackers hence there is check
+                            this.squaresInCheck.push(newPosition.square);
+                    }
+            }
+            king.position = originalKingPosition;
       }
 
       updateCastling() {
@@ -121,7 +131,6 @@ class ChessGame {
       updateEnpassant(position, piece, originalPosition) {
             if (piece.type == "pawn" && this.enpassantTargetSquare != undefined && piece.position.square == this.enpassantTargetSquare.square) {
                   var pawnPos = this.getRowColPositionFromSquare(this.enpassantTargetSquare.square + piece.getPawnDirection()*-8);
-                  console.log(pawnPos);
                   this.board[pawnPos.row][pawnPos.column] = new Square();
                   //AI do not render
                   if (!ai) {
@@ -148,10 +157,11 @@ class ChessGame {
               if (this.turn == "black") {
                     row = 7;
               }
-              if (position.row == row) { //do the promotion thing
-                    //add some on screen select later
+              if (position.row == row) {
                     piece.promoteToType(promotePawn());
-                    renderPiece(position.square, piece);
+                    if (!ai) {
+                          renderPiece(position.square, piece);
+                    }
               }
       }
 
@@ -160,11 +170,11 @@ class ChessGame {
               this.updatePromotion(piece, position);
               this.changeTurn();
               this.updateEnpassant(position, piece, originalPosition);
-              this.getKingAttackers(); //gets array of pieces attacking the king
-              this.updatePins(); //updates pieces which are pinned and not pinned
               this.getSquaresInCheck();
+              this.getKingAttackers(); //gets array of pieces attacking the king
+              this.getAttackerInterceptingSquares(); //gets all intercepting squares from attackers
+              this.updatePins(); //updates pieces which are pinned and not pinned
               this.updateCastling();
-
 
               this.moves = this.findAllChildrenMoves(this);
       }
@@ -228,6 +238,9 @@ class ChessGame {
       }
 
       pieceCanMove(square) {
+            if (this.potentialMoves == undefined) {
+                  return false;
+            }
             for (var i=0; i < this.potentialMoves.length; i++) {
                   if (square == this.potentialMoves[i].square) {
                         return true;

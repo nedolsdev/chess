@@ -88,6 +88,24 @@ class ChessGame {
               return attackers;
       }
 
+      updatePinFromPieceResult(direction, pieceResult, result, noEnpassant) {
+            if (direction.type == pieceResult.endPoint.piece.type || pieceResult.endPoint.piece.type == "queen") { //is pinned
+                    var pinnedPiece = result.endPoint.piece;
+                    var attacker = pieceResult.endPoint.piece;
+                    var movePosition = {...pinnedPiece.position}
+                    if (noEnpassant === true) {
+                          this.enpassantTargetSquare = undefined;
+                          return;
+                    }
+                    pinnedPiece.pinned = true;
+                    pinnedPiece.pinnedSquares = [];
+                    while (movePosition.row != attacker.position.row || movePosition.column != attacker.position.column) {
+                          movePosition = pinnedPiece.newPositionFromDirection(movePosition, direction);
+                          pinnedPiece.pinnedSquares.push(movePosition.square);
+                    }
+            }
+      }
+
       updatePins() {
             for (var pieces in this.pieces[this.turn]) {
                     for (var i=0; i < this.pieces[this.turn][pieces].length; i++) {
@@ -96,21 +114,23 @@ class ChessGame {
             }
             var king = this.pieces[this.turn]["kings"][0];
             var directions = king.getSlidingDirections("queen");
+            console.log("------------")
             for (var i=0; i < directions.length; i++) {
                     var result = king.getMovesInDirection({moves : [], captures : []}, king.position, directions[i], this, []);
                     if (result.endPoint != undefined && result.endPoint.piece.color == this.turn) { //found potentially pinned friendly piece
                             var pieceResult = king.getMovesInDirection({moves : [], captures : []}, result.endPoint.piece.position, directions[i], this, []);
-                            if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.color != this.turn) {
-                                  if (directions[i].type == pieceResult.endPoint.piece.type || pieceResult.endPoint.piece.type == "queen") { //is pinned
-                                          var pinnedPiece = result.endPoint.piece;
-                                          var attacker = pieceResult.endPoint.piece;
-                                          var movePosition = {...pinnedPiece.position}
-                                          pinnedPiece.pinned = true;
-                                          pinnedPiece.pinnedSquares = [];
-                                          while (movePosition.row != attacker.position.row || movePosition.column != attacker.position.column) {
-                                                movePosition = pinnedPiece.newPositionFromDirection(movePosition, directions[i]);
-                                                pinnedPiece.pinnedSquares.push(movePosition.square);
-                                          }
+                            console.log(pieceResult);
+                            if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.color != this.turn && pieceResult.endPoint.piece.position.square != this.enpassantTargetPawn?.square) {
+                                  this.updatePinFromPieceResult(directions[i], pieceResult, result);
+                            }
+
+                            if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.position.square == this.enpassantTargetPawn?.square) {
+                                  console.log("i hit the following piece: ")
+                                  console.log(pieceResult);
+                                  var pieceResult = king.getMovesInDirection({moves : [], captures : []}, pieceResult.endPoint.piece.position, directions[i], this, []);
+                                  console.log(pieceResult);
+                                  if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.color != this.turn) {
+                                        this.updatePinFromPieceResult(directions[i], pieceResult, result, true);
                                   }
                             }
                     }
@@ -227,8 +247,10 @@ class ChessGame {
                   this.enpassantTargetSquare = position;
                   this.enpassantTargetSquare.row = originalPosition.row + (position.row - originalPosition.row)/2;
                   this.enpassantTargetSquare.square = this.enpassantTargetSquare.row * 8 + this.enpassantTargetSquare.column;
+                  this.enpassantTargetPawn = this.getRowColPositionFromSquare(this.enpassantTargetSquare.square + piece.getPawnDirection()*8);
             } else {
                   this.enpassantTargetSquare = undefined;
+                  this.enpassantTargetPawn = undefined;
             }
       }
 
@@ -311,8 +333,17 @@ class ChessGame {
             return childrenGameStates;
       }
 
+      clearAllMoves(allPieces) {
+            for (var pieces in allPieces) {
+                    for (var i=0; i < allPieces[pieces].length; i++) {
+                          allPieces[pieces][i].legalMoves = {moves: [], captures : []};
+                    }
+            }
+      }
+
       findPiecesToCreateGameStates(chessGame) { //locates all pieces which may eventuate to new game states
               var pieces = [];
+              chessGame.clearAllMoves(chessGame.pieces[chessGame.turn]);
               if (chessGame.kingAttackers.length >= 2) { //double check or greater only king can move
                     chessGame.kingInDoubleCheck = true;
                     chessGame.kingInCheck = true;

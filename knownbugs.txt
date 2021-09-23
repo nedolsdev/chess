@@ -1,3 +1,1 @@
-Enpassant can discover self-check. - fix this by skipping the en passant pawn in the pin check
-King can't move out of check.
-Castling does not exist yet.
+None at the moment. :)

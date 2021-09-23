@@ -201,6 +201,7 @@ class Piece {
                   captures : [],
                   moves : []
             };
+            var legalPositions = []; //king is never restricted
             var kingDirections = this.getKingDirections();
             for (var i=0; i < kingDirections.length; i++) {
                   var move = this.newPositionFromDirection(this.position, kingDirections[i]);
@@ -213,10 +214,10 @@ class Piece {
                   }
             }
 
-            if (gameState.tempCastlingRights[gameState.turn].kingSide) {
+            if (gameState.tempCastlingRights[gameState.turn].kingSide && !gameState.kingInCheck) {
                     legalMoves.moves.push(this.getRowColPositionFromSquare(gameState.getKingSideSquares()[1]));
             }
-            if (gameState.tempCastlingRights[gameState.turn].queenSide) {
+            if (gameState.tempCastlingRights[gameState.turn].queenSide && !gameState.kingInCheck) {
                     legalMoves.moves.push(this.getRowColPositionFromSquare(gameState.getQueenSideSquares()[1]));
             }
 

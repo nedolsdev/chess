@@ -54,9 +54,14 @@ class ChessGame {
             } else {
                   this.loadGameFromFenString(fenString);
             }
+
+      }
+
+      startGame() {
             var childrenMoves = this.findAllChildrenMoves(this);
             console.log("All possible children moves states...");
             console.log(childrenMoves);
+            this.makeMoveFromMoveObject(childrenMoves.moves[0]);
             this.moves = childrenMoves;
       }
 
@@ -106,6 +111,15 @@ class ChessGame {
             }
       }
 
+      makeMoveFromMoveObject(move) {
+            //add flags for enpassant, castling, and promotion
+            console.log(move);
+            executeMove(move.square, move.piece, this);
+            if (!ai) {
+                  //make the move on the board
+            }
+      }
+
       updatePins() {
             for (var pieces in this.pieces[this.turn]) {
                     for (var i=0; i < this.pieces[this.turn][pieces].length; i++) {
@@ -114,21 +128,15 @@ class ChessGame {
             }
             var king = this.pieces[this.turn]["kings"][0];
             var directions = king.getSlidingDirections("queen");
-            console.log("------------")
             for (var i=0; i < directions.length; i++) {
                     var result = king.getMovesInDirection({moves : [], captures : []}, king.position, directions[i], this, []);
                     if (result.endPoint != undefined && result.endPoint.piece.color == this.turn) { //found potentially pinned friendly piece
                             var pieceResult = king.getMovesInDirection({moves : [], captures : []}, result.endPoint.piece.position, directions[i], this, []);
-                            console.log(pieceResult);
                             if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.color != this.turn && pieceResult.endPoint.piece.position.square != this.enpassantTargetPawn?.square) {
                                   this.updatePinFromPieceResult(directions[i], pieceResult, result);
                             }
-
                             if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.position.square == this.enpassantTargetPawn?.square) {
-                                  console.log("i hit the following piece: ")
-                                  console.log(pieceResult);
                                   var pieceResult = king.getMovesInDirection({moves : [], captures : []}, pieceResult.endPoint.piece.position, directions[i], this, []);
-                                  console.log(pieceResult);
                                   if (pieceResult.endPoint != undefined && pieceResult.endPoint.piece.color != this.turn) {
                                         this.updatePinFromPieceResult(directions[i], pieceResult, result, true);
                                   }
@@ -274,7 +282,6 @@ class ChessGame {
       }
 
       moveRookForCastle(position, piece, originalPosition) {
-              console.log(position);
               if (piece.type != "king") {
                     return;
               }

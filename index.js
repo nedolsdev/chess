@@ -1,10 +1,11 @@
 // Controls render and other helper functions for display and inputs etc.
 
 //TRIGGERED ON START UP
-var testGame = new ChessGame();
 var ai = false;
+var testGame = new ChessGame();
 renderCheckerBoard("board", testGame);
 testGame.displayBoard();
+testGame.startGame();
 
 
 function renderCheckerBoard(boardID, chessGame) { //add to chess class later
@@ -118,7 +119,6 @@ function hideSquareImage(square) { //add to square class later
 
 function renderPiece(square, piece) { //add to square class later
       var images = document.getElementsByClassName("imageDisplay");
-      console.log(square);
       images[square].style.display = "block";
       images[square].src = "./pieces/" + piece.image + ".png";
 }

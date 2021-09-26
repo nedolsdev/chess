@@ -5,8 +5,7 @@ var ai = false;
 var testGame = new ChessGame();
 renderCheckerBoard("board", testGame);
 testGame.displayBoard();
-testGame.startGame();
-
+testGame.updateGameState(undefined, undefined, undefined, false);
 
 function renderCheckerBoard(boardID, chessGame) { //add to chess class later
       var board = document.getElementById(boardID);
@@ -93,6 +92,7 @@ function clickedPiece(index, chessGame) {
               executeMove(index, chessGame.selectedPiece, chessGame);
               return;
       }
+      console.log(piece);
       if (piece.color != chessGame.turn) { //clicked on a piece that isn't ours
               chessGame.clearMoves();
               clearMovesFromDisplay();

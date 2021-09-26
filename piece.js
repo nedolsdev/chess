@@ -157,7 +157,7 @@ class Piece {
             return (legalPositions.includes(move.square) || (legalPositions.length == 0 && !this.pinned));
       }
 
-      getMovesInDirection(legalMoves, startingPosition, direction, gameState, legalPositions) {
+      getMovesInDirection(legalMoves, startingPosition, direction, gameState, legalPositions, findingPins) {
               var newPosition = this.newPositionFromDirection(startingPosition, direction)
               var moveEnd = false;
               while (!this.positionIsOutOfBounds(newPosition) && !moveEnd) {
@@ -175,7 +175,7 @@ class Piece {
                       move.captureTarget = this.squareAtPosition(gameState.board, move);
                       legalMoves.captures.push(move);
               }
-              if (moveResult != undefined && (moveResult.target == "friendly" || moveResult.target == "enemy")) { //for finding pins
+              if (findingPins && moveResult != undefined && (moveResult.target == "friendly" || moveResult.target == "enemy")) { //for finding pins
                     move.piece = this.squareAtPosition(gameState.board, move).piece;
                     legalMoves.endPoint = move;
               }
@@ -215,10 +215,16 @@ class Piece {
             }
 
             if (gameState.tempCastlingRights[gameState.turn].kingSide && !gameState.kingInCheck) {
-                    legalMoves.moves.push(this.getRowColPositionFromSquare(gameState.getKingSideSquares()[1]));
+                    move = this.getRowColPositionFromSquare(gameState.getKingSideSquares()[1]);
+                    move.piece = this;
+                    move.castle = true;
+                    legalMoves.moves.push(move);
             }
             if (gameState.tempCastlingRights[gameState.turn].queenSide && !gameState.kingInCheck) {
-                    legalMoves.moves.push(this.getRowColPositionFromSquare(gameState.getQueenSideSquares()[1]));
+                    move = this.getRowColPositionFromSquare(gameState.getQueenSideSquares()[1]);
+                    move.piece = this;
+                    move.castle = true;
+                    legalMoves.moves.push(move);
             }
 
             return legalMoves;
@@ -276,6 +282,7 @@ class Piece {
                   legalMoves.captures.push(move);
             }
             if (gameState.enpassantTargetSquare != undefined && move.square == gameState.enpassantTargetSquare.square) {
+                  move.enpassant = true;
                   legalMoves.moves.push(move);
             }
             move = this.newPositionFromDirection(this.position, {column : 1, row : rowDirection});
@@ -285,6 +292,7 @@ class Piece {
                   legalMoves.captures.push(move);
             }
             if (gameState.enpassantTargetSquare != undefined && move.square == gameState.enpassantTargetSquare.square) {
+                  move.enpassant = true;
                   legalMoves.moves.push(move);
             }
             return legalMoves;

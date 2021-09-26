@@ -4,6 +4,7 @@ class Piece {
       constructor(color, type, square) { //square can be a number from 0-63 or row, column, and square data
             this.color = color;
             this.type = type;
+            this.originalType = type; //saves after pawn promotion
             this.image = color + "_" + type;
 
             if (square.row == undefined || square.column == undefined) {
@@ -196,20 +197,23 @@ class Piece {
             return legalMoves;
       }
 
-      getKingMoves(gameState, legalPositions) {
+      getKingMoves(gameState, legalPositions, ignoreLegal) {
             var legalMoves = {
                   captures : [],
                   moves : []
             };
             var legalPositions = []; //king is never restricted
             var kingDirections = this.getKingDirections();
+
             for (var i=0; i < kingDirections.length; i++) {
                   var move = this.newPositionFromDirection(this.position, kingDirections[i]);
                   var moveResult = this.getOneSpaceMove(move, gameState);
                   if (moveResult != undefined && moveResult.target == "empty" && this.moveIsLegal(move, legalPositions) && !gameState.squaresInCheck.includes(move.square)) {
                           legalMoves.moves.push(move);
                   }
-                  if (moveResult != undefined && moveResult.target == "enemy" && this.moveIsLegal(move, legalPositions) && !gameState.squaresInCheck.includes(move.square)) {
+                  if (moveResult != undefined && moveResult.target == "enemy" && (this.moveIsLegal(move, legalPositions) && !gameState.squaresInCheck.includes(move.square) || ignoreLegal)) {
+
+                          move.captureTarget = this.squareAtPosition(gameState.board, move);
                           legalMoves.captures.push(move);
                   }
             }

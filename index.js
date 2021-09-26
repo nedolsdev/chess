@@ -2,6 +2,7 @@
 
 //TRIGGERED ON START UP
 var ai = false;
+var autoQueen = true;
 var testGame = new ChessGame();
 renderCheckerBoard("board", testGame);
 testGame.displayBoard();
@@ -106,6 +107,9 @@ function clickedPiece(index, chessGame) {
 }
 
 function promotePawn() {
+      if (autoQueen) {
+            return "queen";
+      }
       var piece = prompt("Select a piece: ");
       if (piece != "queen" && piece != "bishop" && piece != "knight" && piece != "rook") piece = "queen";
       return piece;

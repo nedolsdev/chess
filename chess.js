@@ -82,6 +82,7 @@ class ChessGame {
               attackers = attackers.concat(this.testForAttackers(king.getSlidingMoves(this, [], "rook"), "rook", "queen"));
               attackers = attackers.concat(this.testForAttackers(king.getSlidingMoves(this, [], "bishop"), "bishop", "queen"));
               attackers = attackers.concat(this.testForAttackers(king.getPawnMoves(this, []), "pawn"));
+              attackers = attackers.concat(this.testForAttackers(king.getKingMoves(this, []), "king"));
               return attackers;
       }
 
@@ -290,6 +291,15 @@ class ChessGame {
               }
       }
 
+      knownStalemate() {
+            for (var pieces in this.pieces.white) { //king stalemate
+                  if (pieces != "kings" && (this.pieces.white[pieces].length != 0 || this.pieces.black[pieces].length != 0)) {
+                          return false;
+                  }
+            }
+            return true;
+      }
+
       updateGameState(position, piece, originalPosition, changeTurn) {
               //order of these functions matter particulary which are before and after change turn and after getting king attackers
               this.updatePromotion(piece, position);
@@ -310,43 +320,46 @@ class ChessGame {
               if (this.moves.moves.length == 0 && this.moves.captures.length == 0) {
                     if (this.kingInCheck) {
                           var turn = this.changeTurn();
-                          alert(turn + "wins!");
+                          alert(turn + " wins!");
                           return;
                     }
                     alert("Stalemate");
                     return;
               }
 
+              if (this.knownStalemate()) {
+                    alert("Known Stalemate");
+                    return;
+              }
 
-                // if (this.turn == "black") {
-                //       var move = randomMoveAI.makeMoveFromMoveSet(this.moves);
-                //       console.log("ai move...")
-                //       console.log(move);
-                //       this.makeMoveFromMoveObject(move);
-                // }
+              var chessGame = this;
+              var move = randomMoveAI.makeMoveFromMoveSet(chessGame.moves);
 
+              setTimeout(function(){
+                      var move = randomMoveAI.makeMoveFromMoveSet(chessGame.moves);
+                      chessGame.makeMoveFromMoveObject(move);
+
+              }, 10);
 
       }
 
       removePieceFromPieces(piece) {
-              console.log("finding piece")
               var turn = this.changeTurn();
-              var pieces = this.pieces[turn][piece.type + "s"];
+              var pieces = this.pieces[turn][piece.originalType + "s"];
               for (var i=0; i < pieces.length; i++) {
                     if (piece.position.square == pieces[i].position.square) {
-                            console.log("found")
                             pieces.splice(i, 1);
                             return;
                     }
               }
-              console.log("error could not find piece")
+              console.log("error could not find piece");
       }
 
       updateFromMove(newSquare, piece, isCastle) {
               var originalPosition = {...piece.position}
               var position = this.getRowColPositionFromSquare(newSquare);
               var square = this.board[position.row][position.column];
-              if (!square.isEmpty) {
+              if (!square.isEmpty && !isCastle) {
                     this.removePieceFromPieces(square.piece);
               }
               square.piece = piece;
@@ -456,7 +469,7 @@ class ChessGame {
                                   }
                           } else { //is a piece
                                   var piece = this.pieceFromFenCharacter(rows[i][j], square);
-                                  this.pieces[piece.color][piece.type+"s"].push(piece);
+                                  this.pieces[piece.color][piece.originalType+"s"].push(piece);
                                   boardRow.push(new Square(piece));
                                   square++;
                           }

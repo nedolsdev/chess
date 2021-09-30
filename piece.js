@@ -1,5 +1,4 @@
 // A chess piece
-
 class Piece {
       constructor(color, type, square) { //square can be a number from 0-63 or row, column, and square data
             this.color = color;
@@ -12,7 +11,6 @@ class Piece {
                   this.position.square = square;
             } else {
                   this.position = square;
-                  this.position.square = square;
             }
 
             this.pinned = false;

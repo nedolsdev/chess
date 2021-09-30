@@ -1,12 +1,15 @@
 // Controls render and other helper functions for display and inputs etc.
 
 //TRIGGERED ON START UP
-var ai = false;
-var autoQueen = true;
-var testGame = new ChessGame();
-renderCheckerBoard("board", testGame);
-testGame.displayBoard();
-testGame.updateGameState(undefined, undefined, undefined, false);
+// var ai = true;
+// var autoQueen = true;
+// var testGame = new ChessGame("1k6/8/8/8/8/8/1KP5/8 w KQkq - 0 1");
+// renderCheckerBoard("board", testGame);
+// testGame.displayBoard();
+// testGame.updateGameState(undefined, undefined, undefined, false);
+// var minimaxChessAI = new MiniMax(getChildrenPositions, evaluateBoard, isGameOver);
+// var result = minimaxChessAI.start(testGame, 6, true);
+// console.log(result);
 
 function renderCheckerBoard(boardID, chessGame) { //add to chess class later
       var board = document.getElementById(boardID);
@@ -40,13 +43,13 @@ function renderCheckerBoard(boardID, chessGame) { //add to chess class later
       }
 }
 
-function executeMove(square, piece, chessGame, isCastle) {
+function executeMove(square, piece, chessGame, isCastle, isFinal) {
         if (!ai) {
               hideSquareImage(piece.position.square);
               renderPiece(square, piece);
               clearMovesFromDisplay();
         }
-        chessGame.updateFromMove(parseInt(square), piece, isCastle);
+        chessGame.updateFromMove(parseInt(square), piece, isCastle, isFinal);
         chessGame.clearMoves();
 }
 
@@ -93,7 +96,6 @@ function clickedPiece(index, chessGame) {
               executeMove(index, chessGame.selectedPiece, chessGame);
               return;
       }
-      console.log(piece);
       if (piece.color != chessGame.turn) { //clicked on a piece that isn't ours
               chessGame.clearMoves();
               clearMovesFromDisplay();

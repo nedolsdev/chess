@@ -1,6 +1,7 @@
 // The basic game of chess
 // I want to add AI later don't forget about your minimax script
 // Later I should invert the pieces list so that pawns are at the top as obvious good moves are often a pawn taking material
+var count = 0;
 class ChessGame {
       constructor(fenString) {
             this.pieces = {
@@ -21,7 +22,10 @@ class ChessGame {
                         knights : [],
                   }
             };
-            this.moves = {};
+            this.moves = {
+                moves : [],
+                captures : []
+            };
             this.selectedPiece = undefined;
             this.enpassantTargetSquare = undefined;
             this.potentialEnpassant = undefined;
@@ -48,6 +52,9 @@ class ChessGame {
                         kingSide : false,
                   },
             }
+            if (fenString == false) {
+                  return;
+            }
 
             if (fenString == undefined) {
                   this.loadGameFromFenString("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -55,6 +62,61 @@ class ChessGame {
                   this.loadGameFromFenString(fenString);
             }
 
+      }
+
+      updateGameState(position, piece, originalPosition, changeTurn, isFinal) {
+              //order of these functions matter particulary which are before and after change turn and after getting king attackers
+              this.updatePromotion(piece, position);
+              this.moveRookForCastle(position, piece, originalPosition);
+              if (changeTurn) {
+                    this.turn = this.changeTurn();
+              }
+              this.updateEnpassant(position, piece, originalPosition);
+              this.getSquaresInCheckSurroundingKing();
+              this.kingAttackers = this.getKingAttackers(); //gets array of pieces attacking the king
+              this.getAttackerInterceptingSquares(); //gets all intercepting squares from attackers
+              this.updatePins(); //updates pieces which are pinned and not pinned
+              this.updatePermCastling();
+              this.updateTempCastling();
+
+              this.moves = this.findAllChildrenMoves(this);
+
+
+              // if (this.moves.moves.length == 0 && this.moves.captures.length == 0) {
+              //       if (this.kingInCheck) {
+              //             var turn = this.changeTurn();
+              //             alert(turn + " wins!");
+              //             return;
+              //       }
+              //       alert("Stalemate");
+              //       return;
+              // }
+              //
+              // if (this.knownStalemate()) {
+              //       alert("Known Stalemate");
+              //       return;
+              // }
+              //
+              // var chessGame = this;
+              //
+              // var childrenPositions = getChildrenPositions(chessGame);
+              // console.log("children positions...")
+              // console.log(childrenPositions)
+              //
+              //
+              // var move = randomMoveAI.makeMoveFromMoveSet(chessGame.moves);
+              // count++;
+              // console.log("Positions: " + count);
+              // chessGame.makeMoveFromMoveObject(move, chessGame);
+
+      }
+
+      getChildPositionFromMove(move, chessGame) {
+            //get deep copy of object
+            var newGame = deepCopy(chessGame);
+            newGame.makeMoveFromMoveObject(move, newGame);
+            newGame.move = move;
+            return newGame;
       }
 
       testForAttackers(attackers, type1, type2) {
@@ -104,8 +166,8 @@ class ChessGame {
             }
       }
 
-      makeMoveFromMoveObject(move) {
-            executeMove(move.square, move.piece, this);
+      makeMoveFromMoveObject(move, gameState) {
+            executeMove(move.square, move.piece, gameState, undefined, true);
       }
 
       updatePins() {
@@ -300,49 +362,6 @@ class ChessGame {
             return true;
       }
 
-      updateGameState(position, piece, originalPosition, changeTurn) {
-              //order of these functions matter particulary which are before and after change turn and after getting king attackers
-              this.updatePromotion(piece, position);
-              this.moveRookForCastle(position, piece, originalPosition);
-              if (changeTurn) {
-                    this.turn = this.changeTurn();
-              }
-              this.updateEnpassant(position, piece, originalPosition);
-              this.getSquaresInCheckSurroundingKing();
-              this.kingAttackers = this.getKingAttackers(); //gets array of pieces attacking the king
-              this.getAttackerInterceptingSquares(); //gets all intercepting squares from attackers
-              this.updatePins(); //updates pieces which are pinned and not pinned
-              this.updatePermCastling();
-              this.updateTempCastling();
-
-              this.moves = this.findAllChildrenMoves(this);
-
-              if (this.moves.moves.length == 0 && this.moves.captures.length == 0) {
-                    if (this.kingInCheck) {
-                          var turn = this.changeTurn();
-                          alert(turn + " wins!");
-                          return;
-                    }
-                    alert("Stalemate");
-                    return;
-              }
-
-              if (this.knownStalemate()) {
-                    alert("Known Stalemate");
-                    return;
-              }
-
-              var chessGame = this;
-              var move = randomMoveAI.makeMoveFromMoveSet(chessGame.moves);
-
-              setTimeout(function(){
-                      var move = randomMoveAI.makeMoveFromMoveSet(chessGame.moves);
-                      chessGame.makeMoveFromMoveObject(move);
-
-              }, 10);
-
-      }
-
       removePieceFromPieces(piece) {
               var turn = this.changeTurn();
               var pieces = this.pieces[turn][piece.originalType + "s"];
@@ -355,7 +374,10 @@ class ChessGame {
               console.log("error could not find piece");
       }
 
-      updateFromMove(newSquare, piece, isCastle) {
+      updateFromMove(newSquare, piece, isCastle, isFinal) {
+              if (piece == undefined) {
+                    return;
+              }
               var originalPosition = {...piece.position}
               var position = this.getRowColPositionFromSquare(newSquare);
               var square = this.board[position.row][position.column];
@@ -367,8 +389,9 @@ class ChessGame {
               this.board[piece.position.row][piece.position.column] = new Square();
               piece.position = piece.getRowColPositionFromSquare(newSquare);
               if (isCastle !== true) {
-                    this.updateGameState(position, piece, originalPosition, true);
+                    this.updateGameState(position, piece, originalPosition, true, isFinal);
               }
+
       }
 
       findAllChildrenMoves(chessGame) {

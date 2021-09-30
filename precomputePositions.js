@@ -16,6 +16,10 @@ const KNIGHT_DIRECTIONS = [UP*2 + LEFT, UP*2 + RIGHT, DOWN*2 + LEFT, DOWN*2 + RI
 const WHITE_PAWN_STARTING_POSITIONS = [48, 49, 50, 51, 52, 53, 54, 55];
 const BLACK_PAWN_STARTING_POSITIONS = [8, 9, 10, 11, 12, 13, 14, 15];
 
+//I can't be bothered doing modulus math
+const KNIGHT_LEFT_EDGE = [0, 1, 8, 9, 16, 17, 24, 25, 32, 33, 40, 41, 48, 49, 56, 57];
+const KNIGHT_RIGHT_EDGE = [6, 7, 14, 15, 22, 23, 30, 31, 38, 39, 46, 47, 54, 55, 62, 63];
+
 //these are constant values that assume an ideal board state where pieces can move freely and pawns are always able to capture and complete enpassant
 var pieceMovesAtSquare = { //each piece array will have 64 squares indexed 0-63
       bishop : [],
@@ -42,6 +46,7 @@ function squareIsInBounds(square) {
 
 function squareIsInLeftOrRightBounds(square, direction) { //because the final square on the row should be counted
       var horizontalDirection = (direction == LEFT || direction == UP_LEFT || direction == DOWN_LEFT) ? LEFT : RIGHT;
+
       //direction to mod, gives this function : (direction + 1) * 7 / 2 such that
       //direction -1 == mod 0
       //direction 1 == mod 7
@@ -49,6 +54,13 @@ function squareIsInLeftOrRightBounds(square, direction) { //because the final sq
             return false;
       }
       return true;
+}
+
+function squareIsInKnightBounds(square, direction) {
+        if ( ( KNIGHT_LEFT_EDGE.includes(square+direction) && KNIGHT_RIGHT_EDGE.includes(square) ) || ( KNIGHT_RIGHT_EDGE.includes(square+direction) && KNIGHT_LEFT_EDGE.includes(square) ) ) {
+                return false;
+        }
+        return true;
 }
 
 function getMovesInDirectionFromSquare(square, direction) { //squrae of piece, direction the piece is moving
@@ -77,10 +89,11 @@ function getPieceSlidingMovesFromSquare(piece, square) {
         return movesInAllDirections; //returns two dimensional array of moves in each direction
 }
 
-function getOneSpaceMoveInDirectionFromSquare(square, direction) {
+function getOneSpaceMoveInDirectionFromSquare(square, direction, piece) {
         var newSquare = square + direction;
-        var testLeftRightBounds = (direction == UP || direction == DOWN) ? false : true;
-        if (squareIsInBounds(newSquare) && (!testLeftRightBounds || squareIsInLeftOrRightBounds(square, direction))) {
+        var testLeftRightBounds = !(direction == UP || direction == DOWN || piece == "knight");
+        var testKnightOutOfBounds = (piece == "knight");
+        if (squareIsInBounds(newSquare) && (!testLeftRightBounds || squareIsInLeftOrRightBounds(square, direction)) && (!testKnightOutOfBounds || squareIsInKnightBounds(square, direction)) ) {
                 return newSquare;
         }
 }
@@ -100,7 +113,7 @@ function getOneSpacesMovesOfPieceFromSquare(color, piece, square) {
         var movesInAllDirections = [];
         for (var i=0; i < directions.length; i++) {
               var direction = directions[i];
-              var movesInDirection = getOneSpaceMoveInDirectionFromSquare(square, direction);
+              var movesInDirection = getOneSpaceMoveInDirectionFromSquare(square, direction, piece);
               if (movesInDirection != undefined) {
                     movesInAllDirections.push(movesInDirection);
               }
